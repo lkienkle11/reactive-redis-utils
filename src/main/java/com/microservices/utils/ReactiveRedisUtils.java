@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Slf4j
 public class ReactiveRedisUtils {
     ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
 
