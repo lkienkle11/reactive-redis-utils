@@ -1,8 +1,11 @@
 package com.microservices.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.redis.connection.ReactiveRedisConnection;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -16,11 +19,13 @@ import java.util.concurrent.TimeUnit;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ReactiveRedisUtils {
     ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
-
+    ReactiveRedisConnectionFactory connectionFactory;
     ObjectMapper objectMapper;
 
-    public ReactiveRedisUtils(ReactiveRedisTemplate<String, Object> reactiveRedisTemplate) {
+    public ReactiveRedisUtils(ReactiveRedisTemplate<String, Object> reactiveRedisTemplate,
+                              ReactiveRedisConnectionFactory connectionFactory) {
         this.reactiveRedisTemplate = reactiveRedisTemplate;
+        this.connectionFactory = connectionFactory;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
     }
@@ -95,5 +100,30 @@ public class ReactiveRedisUtils {
 
     public Mono<List<Object>> multiGet(List<String> keys) {
         return reactiveRedisTemplate.opsForValue().multiGet(keys);
+    }
+
+    public Mono<Long> publish(String channel, Object message) {
+        return reactiveRedisTemplate.convertAndSend(channel, message);
+    }
+
+    public Flux<String> subscribe(String channel) {
+        return reactiveRedisTemplate
+                .listenToChannel(channel)
+                .map(pubSubMessage -> {
+                    Object raw = pubSubMessage.getMessage();
+                    try {
+                        if (raw instanceof String) {
+                            return (String) raw;
+                        }
+                        return objectMapper.writeValueAsString(raw);
+                    } catch (JsonProcessingException e) {
+                        return "ERROR_PARSING:" + e.getMessage();
+                    }
+                });
+    }
+
+    public <T> Flux<T> subscribe(String channel, Class<T> clazz) {
+        return subscribe(channel)
+                .map(json -> objectMapper.convertValue(json, clazz));
     }
 }
