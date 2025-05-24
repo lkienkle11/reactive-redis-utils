@@ -19,13 +19,10 @@ import java.util.concurrent.TimeUnit;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ReactiveRedisUtils {
     ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
-    ReactiveRedisConnectionFactory connectionFactory;
     ObjectMapper objectMapper;
 
-    public ReactiveRedisUtils(ReactiveRedisTemplate<String, Object> reactiveRedisTemplate,
-                              ReactiveRedisConnectionFactory connectionFactory) {
+    public ReactiveRedisUtils(ReactiveRedisTemplate<String, Object> reactiveRedisTemplate) {
         this.reactiveRedisTemplate = reactiveRedisTemplate;
-        this.connectionFactory = connectionFactory;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
     }
