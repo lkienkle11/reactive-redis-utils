@@ -3,14 +3,16 @@ package com.microservices.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@Component
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ReactiveRedisUtils {
     ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
@@ -62,6 +64,10 @@ public class ReactiveRedisUtils {
                 .map(data -> objectMapper.convertValue(data, clazz));
     }
 
+    public Mono<Long> saveToSet(String key, Object value) {
+        return reactiveRedisTemplate.opsForSet().add(key, value);
+    }
+
     public Mono<Long> saveToSet(String key, Object value, long timeout, TimeUnit unit) {
         Duration ttl = Duration.ofMillis(unit.toMillis(timeout));
 
@@ -81,5 +87,13 @@ public class ReactiveRedisUtils {
                                 return Mono.just(saved);
                             });
                 });
+    }
+
+    public Mono<Boolean> isMember(String key, Object value) {
+        return reactiveRedisTemplate.opsForSet().isMember(key, value);
+    }
+
+    public Mono<List<Object>> multiGet(List<String> keys) {
+        return reactiveRedisTemplate.opsForValue().multiGet(keys);
     }
 }
