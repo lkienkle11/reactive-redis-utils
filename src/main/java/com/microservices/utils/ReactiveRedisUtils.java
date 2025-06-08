@@ -55,8 +55,6 @@ public class ReactiveRedisUtils {
                 .switchIfEmpty(Flux.empty());
     }
 
-    // test v0.2.0
-
     public Mono<Void> saveToRedis(String key, Object value) {
         return reactiveRedisTemplate
                 .opsForValue()
