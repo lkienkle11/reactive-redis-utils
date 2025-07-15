@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -15,6 +16,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -171,6 +173,28 @@ public class ReactiveRedisUtils {
 
     public Mono<Long> publish(String channel, Object message) {
         return reactiveRedisTemplate.convertAndSend(channel, message);
+    }
+
+    /** PUBLISH nhiều kênh, nhiều thông điệp (channel+payload) */
+    public Flux<Long> publishes(List<Pair<String, Object>> dataMessages) {
+        if (dataMessages == null || dataMessages.isEmpty()) return Flux.empty();
+
+        return Flux.fromIterable(dataMessages)
+                .filter(Objects::nonNull)
+                // flatMap với “prefetch” cao ⇒ gửi song song nhưng vẫn back-pressure
+                .flatMap(p -> reactiveRedisTemplate.convertAndSend(
+                                p.getFirst(), p.getSecond()),
+                        /* concurrency */ 64,   /* prefetch */ 256);
+    }
+
+    /** PUBLISH 1 kênh, nhiều thông điệp */
+    public Flux<Long> publishes(String channel, List<Object> messages) {
+        if (channel == null || messages == null || messages.isEmpty()) return Flux.empty();
+
+        return Flux.fromIterable(messages)
+                .filter(Objects::nonNull)
+                .flatMap(msg -> reactiveRedisTemplate.convertAndSend(channel, msg),
+                        64, 256);
     }
 
     public Flux<String> subscribe(String channel) {
